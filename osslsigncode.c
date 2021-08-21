@@ -110,6 +110,7 @@
 #include <openssl/asn1t.h>
 #include <openssl/bn.h>
 #include <openssl/conf.h>
+#include <openssl/ossl_typ.h>
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif /* OPENSSL_NO_ENGINE */
@@ -1927,20 +1928,58 @@ static time_t asn1_get_time_t(const ASN1_TIME *s)
 	}
 }
 
+static void hex_encode(unsigned char *readbuf, void *writebuf, size_t len)
+{
+	for (size_t i = 0; i < len; i++)
+	{
+		char *l = (char *)(2 * i + ((intptr_t)writebuf));
+		sprintf(l, "%02x", readbuf[i]);
+	}
+}
+
+static int cert_fingerprint(X509 *cert, const EVP_MD *digest_type, unsigned digest_length,
+							char *result_buffer)
+{
+
+	unsigned char buffer[digest_length];
+	unsigned result_digest_length;
+
+	int result = X509_digest(cert, digest_type, buffer, &result_digest_length);
+	if (result == 0 || result_digest_length != digest_length)
+	{
+		return 0; /* failure */
+	}
+
+	hex_encode(buffer, result_buffer, digest_length);
+
+	return 1; /* success */
+}
+
 static int print_cert(X509 *cert, int i)
 {
 	char *subject, *issuer, *serial;
+	char sha1[41], sha256[65], sha512[129];
 	BIGNUM *serialbn;
 
 	subject = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
 	issuer = X509_NAME_oneline(X509_get_issuer_name(cert), NULL, 0);
 	serialbn = ASN1_INTEGER_to_BN(X509_get_serialNumber(cert), NULL);
 	serial = BN_bn2hex(serialbn);
+
+	cert_fingerprint(cert, EVP_sha1(), 20, sha1);
+	cert_fingerprint(cert, EVP_sha256(), 32, sha256);
+	cert_fingerprint(cert, EVP_sha512(), 64, sha512);
+
 	if (i > 0)
 		printf("\t------------------\n");
-	printf("\tSigner #%d:\n\t\tSubject: %s\n\t\tIssuer : %s\n\t\tSerial : %s\n\t\tCertificate expiration date:\n",
+
+	printf("\tSigner #%d:\n\t\tSubject: %s\n\t\tIssuer : %s\n\t\tSerial : %s",
 			i, subject, issuer, serial);
-	printf("\t\t\tnotBefore : ");
+
+	printf("\n\n\t\tFingerprints:");
+	printf("\n\t\t\tSHA-1  : %s\n\t\t\tSHA-256: %s\n\t\t\tSHA-512: %s\n", sha1, sha256, sha512);
+
+	printf("\n\t\tCertificate expiration date:\n\t\t\tnotBefore : ");
 	asn1_print_time(X509_get0_notBefore(cert));
 	printf("\t\t\tnotAfter : ");
 	asn1_print_time(X509_get0_notAfter(cert));
