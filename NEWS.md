@@ -1,5 +1,31 @@
 # osslsigncode change log
 
+### 2.5 (2022.08.12)
+
+- fixed the Unix executable install path
+- fixed the hardcoded "pkcs11" engine id
+- fixed building with MinGW
+- fixed testing with the python3 distributed with Ubuntu 18.04
+
+### 2.4 (2022.08.02)
+
+- migrated the build system from GNU Autoconf to CMake
+- added the "-h" option to set the cryptographic hash function
+  for the "attach -signature" and "add" commands
+- set the default hash function to "sha256"
+- added the "attach-signature" option to compute and compare the
+  leaf certificate hash for the "add" command
+- renamed the "-st" option "-time" (the old name is accepted for
+  compatibility)
+- updated the "-time" option to also set explicit verification time
+- added the "-ignore-timestamp" option to disable timestamp server
+  signature verification
+- removed the "-timestamp-expiration" option
+- fixed several bugs
+- updated the included documentation
+- enabled additional compiler/linker hardening options
+- added CI based on GitHub Actions
+
 ### 2.3 (2022.03.06)
 
 **CRITICAL SECURITY VULNERABILITIES**
